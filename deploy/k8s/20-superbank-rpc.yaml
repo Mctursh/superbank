@@ -1,0 +1,79 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: superbank-rpc
+  namespace: superbank-dev
+  labels:
+    app: superbank-rpc
+spec:
+  selector:
+    app: superbank-rpc
+  ports:
+  - name: http
+    port: 8899
+    targetPort: 8899
+  - name: metrics
+    port: 9900
+    targetPort: 9900
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superbank-rpc
+  namespace: superbank-dev
+  labels:
+    app: superbank-rpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: superbank-rpc
+  template:
+    metadata:
+      labels:
+        app: superbank-rpc
+    spec:
+      containers:
+      - name: superbank-rpc
+        image: superbank-dev
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/local/bin/superbank-rpc"]
+        env:
+        - name: RUST_LOG
+          value: "info,clickhouse_rs=warn"
+        - name: LOG_FORMAT
+          value: "plain"
+        - name: RPC_HOST
+          value: "0.0.0.0"
+        - name: RPC_PORT
+          value: "8899"
+        - name: METRICS_HOST
+          value: "0.0.0.0"
+        - name: METRICS_PORT
+          value: "9900"
+        - name: CLICKHOUSE_URL
+          value: "http://clickhouse:8123"
+        - name: CLICKHOUSE_DATABASE
+          value: "default"
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_PASSWORD
+        ports:
+        - name: http
+          containerPort: 8899
+        - name: metrics
+          containerPort: 9900
+        readinessProbe:
+          tcpSocket:
+            port: 8899
+          initialDelaySeconds: 2
+          periodSeconds: 5
+          timeoutSeconds: 1
+          failureThreshold: 12

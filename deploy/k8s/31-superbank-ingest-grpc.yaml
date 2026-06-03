@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superbank-ingest-grpc
+  namespace: superbank-dev
+  labels:
+    app: superbank-ingest-grpc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: superbank-ingest-grpc
+  template:
+    metadata:
+      labels:
+        app: superbank-ingest-grpc
+    spec:
+      containers:
+      - name: superbank
+        image: superbank-dev
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/local/bin/superbank"]
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: SUPERBANK_SOURCE
+          value: "grpc"
+        - name: DRAGONSMOUTH_ENDPOINT
+          valueFrom:
+            secretKeyRef:
+              name: superbank-dragonsmouth
+              key: DRAGONSMOUTH_ENDPOINT
+        - name: DRAGONSMOUTH_X_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: superbank-dragonsmouth
+              key: DRAGONSMOUTH_X_TOKEN
+        - name: DRAGONSMOUTH_COMMITMENT
+          value: "finalized"
+        - name: DRAGONSMOUTH_FROM_SLOT
+          value: "*"
+        - name: CLICKHOUSE_URL
+          value: "http://clickhouse:8123"
+        - name: CLICKHOUSE_DATABASE
+          value: "default"
+        - name: CLICKHOUSE_ENTRIES_TABLE
+          value: "default.entries"
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_PASSWORD

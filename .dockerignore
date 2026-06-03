@@ -1,0 +1,11 @@
+target/
+**/target/
+Dockerfile
+.dockerignore
+.git/
+.gitignore
+*.md
+.DS_Store
+*.swp
+*.swo
+*~

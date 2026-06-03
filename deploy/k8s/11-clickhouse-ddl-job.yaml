@@ -1,0 +1,61 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: clickhouse-ddl
+  namespace: superbank-dev
+  labels:
+    app: clickhouse-ddl
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      labels:
+        app: clickhouse-ddl
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: clickhouse-ddl
+        image: clickhouse/clickhouse-server:26.1.2.11
+        env:
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_PASSWORD
+        command:
+        - /bin/sh
+        - -ec
+        - |
+          echo "Waiting for ClickHouse to be ready..."
+          i=0
+          while [ "${i}" -lt 300 ]; do
+            if clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --query "SELECT 1" >/dev/null 2>&1; then
+              break
+            fi
+            i=$((i+1))
+            sleep 1
+          done
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --query "SELECT 1"
+
+          echo "Applying local ClickHouse DDL..."
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/transactions.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/blocks_metadata.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/entries.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/gsfa.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/gsfa_hot.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/signatures.sql
+          clickhouse-client --host clickhouse --user "${CLICKHOUSE_USER}" --password "${CLICKHOUSE_PASSWORD}" --multiquery < /ddl/token_owner_activity.sql
+          echo "DDL applied."
+        volumeMounts:
+        - name: ddl
+          mountPath: /ddl
+          readOnly: true
+      volumes:
+      - name: ddl
+        configMap:
+          name: clickhouse-ddl

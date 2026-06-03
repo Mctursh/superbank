@@ -1,0 +1,76 @@
+# Superbank ingestor example configuration.
+# Copy to superbank.yaml and pass via --config / SUPERBANK_CONFIG.
+
+source: "grpc" # fumarole | grpc | rpc | bigtable
+
+endpoint: "https://your.dragonsmouth.endpoint:443"
+x-token: "your-token"
+commitment: "finalized"
+# Optional for gRPC source. Use '*' to start from the latest slot already in
+# blocks_metadata, or 0 to start from the earliest available slot.
+dragonsmouth-from-slot: 0
+grpc-max-decoding-bytes: 67108864
+grpc-http2-adaptive-window: false
+grpc-idle-timeout-secs: 30
+grpc-health-watch-enabled: true
+
+# Fumarole source options (required when source is "fumarole")
+# fumarole-endpoint: "https://your.fumarole.endpoint:443"
+# fumarole-x-token: "your-token"
+# fumarole-consumer-group: "superbank-mainnet"
+# fumarole-create-consumer-group: false
+# fumarole-from-slot: 0
+# fumarole-data-plane-tcp-connections: 4
+# fumarole-concurrent-download-limit-per-tcp: 2
+# fumarole-data-channel-capacity: 4096
+# fumarole-commit-interval-secs: 10
+# fumarole-no-commit: false
+
+# RPC source options (required when source is "rpc")
+# rpc-url: "https://api.mainnet-beta.solana.com"
+# rpc-from-slot: 0
+# to-slot: 0
+# slot-count: 1000
+# rpc-timeout-secs: 30
+# rpc-retry-backoff-ms: 500
+# rpc-max-inflight: 64
+# rpc-max-supported-tx-version: 0
+# rpc-flush-every-slots: 500
+# rpc-progress-every-slots: 100
+# rpc-discovery-chunk-slots: 10000
+
+# Bigtable source options (required when source is "bigtable"; set exactly one of bigtable-range or bigtable-slot-file)
+# rpc-url: "https://api.mainnet-beta.solana.com" # required for epoch ranges
+# bigtable-range: "1-10" # epochs (requires rpc-url), or "123:456" for slots, or "5" for epoch 5
+# bigtable-slot-file: "/path/to/slots.txt" # whitespace-separated slot list; mutually exclusive with bigtable-range
+# bigtable-instance: "solana-ledger"
+# bigtable-app-profile: "default"
+# bigtable-timeout-secs: 30
+# bigtable-max-message-bytes: 67108864
+# bigtable-credential-path: "/path/to/gcp-credentials.json"
+# bigtable-credential-json: "" # stringified JSON (mutually exclusive with credential-path)
+# bigtable-discovery-limit: 10000
+# bigtable-fetch-batch-size: 500
+# bigtable-fetch-concurrency: 4
+# bigtable-insert-concurrency: 1
+# bigtable-decode-concurrency: 8
+# bigtable-progress-every-slots: 10000
+
+clickhouse-url: "http://localhost:8123"
+metrics-host: "0.0.0.0"
+metrics-port: 9901
+# Optional static label added to all ingestor metrics, e.g. the ClickHouse cluster name.
+# metrics-cluster-label: "mainnet-west"
+clickhouse-database: "default"
+clickhouse-user: "default"
+clickhouse-password: ""
+# Force synchronous inserts by default; set true only if your ClickHouse setup supports async inserts safely.
+# clickhouse-async-insert: false
+transactions-table: "default.transactions"
+blocks-table: "default.blocks_metadata"
+entries-table: "default.entries"
+
+transactions-flush-rows: 25000
+blocks-flush-rows: 2000
+flush-interval-secs: 5
+flush-every-block: false

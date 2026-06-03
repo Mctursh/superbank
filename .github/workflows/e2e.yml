@@ -1,0 +1,40 @@
+name: E2E - Tilt + k6
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  SUPERBANK_GIT_SHA: ${{ github.sha }}
+
+jobs:
+  e2e:
+    name: E2E - Tilt + k6
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@ef8a148080ab6020fd15196c2084a2eea5ff2d25 # v22
+
+      - name: Run Tilt E2E
+        run: |
+          nix develop \
+            --option substituters "https://cache.nixos.org/" \
+            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" \
+            -c scripts/ci/release-e2e.sh
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: e2e-${{ github.run_id }}
+          if-no-files-found: ignore
+          path: artifacts/release-e2e/

@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+#
+# Copyright 2025-2026 Triton One Limited. All rights reserved.
+#
+
+FROM ubuntu:24.04
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates libssl3 \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY dist/superbank /usr/local/bin/superbank
+COPY dist/superbank-rpc /usr/local/bin/superbank-rpc
+
+RUN chmod +x /usr/local/bin/superbank /usr/local/bin/superbank-rpc

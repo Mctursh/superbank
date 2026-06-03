@@ -1,0 +1,51 @@
+name: k6
+
+on:
+  workflow_dispatch:
+    inputs:
+      rpc_url:
+        description: "Superbank RPC URL"
+        required: true
+        default: "http://localhost:8899"
+      scenario:
+        description: "Path to the k6 scenario script (relative to repo root)"
+        required: true
+        default: "tests/k6/scenarios/basic/superbank-rpc-get-signatures.js"
+      vus:
+        description: "Virtual users (passed via env VUS)"
+        required: false
+        default: "5"
+      duration:
+        description: "Test duration (passed via env DURATION)"
+        required: false
+        default: "30s"
+      reference_rpc_url:
+        description: "Optional reference RPC URL for validation scenarios (env REFERENCE_RPC_URL)"
+        required: false
+        default: ""
+      flags:
+        description: "Additional k6 CLI flags (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: Run k6 scenario
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+
+      - name: Run k6
+        uses: grafana/k6-action@e4714b734f2b0afaabeb7b4a69142745548ab9ec # v0.3.1
+        with:
+          filename: ${{ inputs.scenario }}
+          flags: ${{ inputs.flags }}
+        env:
+          RPC_URL: ${{ inputs.rpc_url }}
+          VUS: ${{ inputs.vus }}
+          DURATION: ${{ inputs.duration }}
+          REFERENCE_RPC_URL: ${{ inputs.reference_rpc_url }}

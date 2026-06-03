@@ -1,0 +1,82 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'superbank'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=superbank",
+          "--package=superbank"
+        ],
+        "filter": {
+          "name": "superbank",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in executable 'superbank'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--bin=superbank",
+          "--package=superbank"
+        ],
+        "filter": {
+          "name": "superbank",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug executable 'superbank-rpc'",
+      "cargo": {
+        "args": [
+          "build",
+          "--bin=superbank-rpc",
+          "--package=superbank-rpc"
+        ],
+        "filter": {
+          "name": "superbank-rpc",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "Debug unit tests in library 'superbank-rpc'",
+      "cargo": {
+        "args": [
+          "test",
+          "--no-run",
+          "--lib",
+          "--package=superbank-rpc"
+        ],
+        "filter": {
+          "name": "superbank_rpc",
+          "kind": "lib"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
+    }
+  ]
+}

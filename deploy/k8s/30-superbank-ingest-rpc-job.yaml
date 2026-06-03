@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: superbank-ingest-rpc
+  namespace: superbank-dev
+  labels:
+    app: superbank-ingest-rpc
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: superbank-ingest-rpc
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: superbank
+        image: superbank-dev
+        imagePullPolicy: IfNotPresent
+        command: ["/usr/local/bin/superbank"]
+        env:
+        - name: RUST_LOG
+          value: "info"
+        - name: SUPERBANK_SOURCE
+          value: "rpc"
+        - name: RPC_URL
+          value: "https://api.mainnet-beta.solana.com"
+        - name: RPC_FROM_SLOT
+          value: "0"
+        - name: RPC_SLOT_COUNT
+          value: "5000"
+        - name: RPC_MAX_INFLIGHT
+          value: "4"
+        - name: RPC_RETRY_BACKOFF_MS
+          value: "1000"
+        - name: CLICKHOUSE_URL
+          value: "http://clickhouse:8123"
+        - name: CLICKHOUSE_DATABASE
+          value: "default"
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_PASSWORD

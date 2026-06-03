@@ -1,0 +1,10 @@
+# Build artifacts
+/target
+# VCS
+/.git
+# Editor
+/.vscode
+# Local tools
+/.bin
+# Tests
+/tests/k6

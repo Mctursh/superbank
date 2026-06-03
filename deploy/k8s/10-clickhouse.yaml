@@ -1,0 +1,78 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  namespace: superbank-dev
+  labels:
+    app: clickhouse
+spec:
+  selector:
+    app: clickhouse
+  ports:
+  - name: http
+    port: 8123
+    targetPort: 8123
+  - name: tcp
+    port: 9000
+    targetPort: 9000
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: clickhouse
+  namespace: superbank-dev
+  labels:
+    app: clickhouse
+spec:
+  serviceName: clickhouse
+  replicas: 1
+  selector:
+    matchLabels:
+      app: clickhouse
+  template:
+    metadata:
+      labels:
+        app: clickhouse
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+      - name: clickhouse
+        image: clickhouse/clickhouse-server:26.1.2.11
+        env:
+        - name: CLICKHOUSE_USER
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_USER
+        - name: CLICKHOUSE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: superbank-clickhouse
+              key: CLICKHOUSE_PASSWORD
+        ports:
+        - name: http
+          containerPort: 8123
+        - name: tcp
+          containerPort: 9000
+        readinessProbe:
+          httpGet:
+            path: /ping
+            port: 8123
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 12
+        livenessProbe:
+          httpGet:
+            path: /ping
+            port: 8123
+          initialDelaySeconds: 20
+          periodSeconds: 10
+          timeoutSeconds: 2
+          failureThreshold: 6
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/clickhouse
+      volumes:
+      - name: data
+        emptyDir: {}

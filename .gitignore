@@ -1,0 +1,63 @@
+**/target
+*.car
+./target/
+# Build artifacts and package outputs
+build/
+out/
+pkg/
+*.tgz
+*.tar.gz
+*.zip
+*.whl
+*.crate
+.claude/
+.claude-flow/
+.swarm/
+.codex/
+./bin/
+vendor/
+.ansible/
+rpc-binary
+*.deprecated
+
+**/node_modules
+# Sensitive configuration files with passwords
+*cluster-config.xml
+
+# Kubernetes secrets
+k8s/*secret*.yaml
+k8s/clickhouse-endpoints.yaml
+ingest/**/k8s/*secret*.yaml
+ingest/**/k8s/*secret*.yml
+!ingest/**/k8s/*secret*.example.yaml
+!ingest/**/k8s/*secret*.example.yml
+
+# Ansible inventory with credentials
+ansible/inventory.yml
+
+# Metadata and preprocessed configs
+metadata/
+preprocessed_configs/
+ingest/jetstreamer-clickhouse-plugin/bin/
+
+# Temporary files
+uuid
+**/__pycache__/
+*.pyc
+artifacts/
+k6-*.log
+ingest/*.log
+copy-transactions-logs-*/
+
+# Test scripts
+test.sh
+test-ingest.sh
+
+# Superbank local development files
+superbank.yaml
+!deploy/k8s/superbank.yaml
+.bin
+dist/
+
+credentials.json
+clickhouse.sh
