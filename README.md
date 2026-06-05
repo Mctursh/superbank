@@ -5,7 +5,7 @@
   <br/>Superbank
 </h1>
 
-[![CI](https://github.com/rpcpool/superbank/actions/workflows/ci.yml/badge.svg)](https://github.com/rpcpool/superbank/actions/workflows/ci.yml)
+[![CI](https://github.com/solana-rpc/superbank/actions/workflows/ci.yml/badge.svg)](https://github.com/solana-rpc/superbank/actions/workflows/ci.yml)
 
 Ingest Solana ledger data into ClickHouse and serve Solana-compatible JSON-RPC from that data.
 
@@ -237,8 +237,8 @@ rows already present on the target by exact table key instead of failing the run
 - `ddl/` ClickHouse schemas (transactions, block metadata, optional PoH entries, GSFA/signatures, token owner activity)
 - `tests/k6/` load/validation tests for `superbank-rpc`
 - `scripts/` helper scripts (local runs, analysis, k6 orchestration)
-- `ingest/jetstreamer` standalone Jetstreamer workspace (not part of the root Cargo workspace)
-- `ingest/jetstreamer-clickhouse-plugin` Jetstreamer ClickHouse ingestion plugin (standalone)
+- `ingest/jetstreamer` git submodule — standalone Jetstreamer workspace (not part of the root Cargo workspace); requires `git clone --recurse-submodules` or `git submodule update --init`
+- `ingest/jetstreamer-clickhouse-plugin` Jetstreamer ClickHouse ingestion plugin (standalone workspace — build with `cargo build --release` from within this directory, not `-p jetstreamer-clickhouse-plugin` from the repo root)
 
 ## Development
 
