@@ -5,6 +5,21 @@ running ClickHouse locally, building/running the ingestor and RPC server, and ru
 
 If you just want to run Superbank locally, start with `README.md`.
 
+## Getting the repo
+
+```bash
+git clone --recurse-submodules https://github.com/solana-rpc/superbank.git
+cd superbank
+```
+
+`ingest/jetstreamer` is a git submodule. Cloning without `--recurse-submodules` leaves it empty
+and causes build errors when compiling the Jetstreamer ClickHouse plugin. If you already cloned
+without the flag, populate it with:
+
+```bash
+git submodule update --init
+```
+
 ## Who This Is For
 
 Contributors to:

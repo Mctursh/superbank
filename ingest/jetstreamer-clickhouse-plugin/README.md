@@ -64,6 +64,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Standalone runner
 
+> **Note:** `ingest/jetstreamer-clickhouse-plugin` is its own Cargo workspace, separate from the
+> root workspace. Run all `cargo` commands from within this directory. Running
+> `cargo build --release -p jetstreamer-clickhouse-plugin` from the repo root will silently do
+> nothing because the crate is not a member of the root workspace.
+>
+> Also: `ingest/jetstreamer` (a dependency) is a git submodule. If the build fails with missing
+> source files, populate it first:
+> ```bash
+> git submodule update --init
+> ```
+
 This crate ships a minimal runner binary so you can copy just this folder and run the plugin:
 
 ```bash
