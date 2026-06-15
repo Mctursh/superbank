@@ -476,6 +476,7 @@ mod tests {
             grpc_http2_adaptive_window: false,
             grpc_idle_timeout_secs: 30,
             grpc_health_watch_enabled: true,
+            grpc_slot_notifications: true,
             rpc_url: None,
             rpc_to_slot: None,
             rpc_slot_count: None,

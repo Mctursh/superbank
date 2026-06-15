@@ -142,8 +142,11 @@ pub(crate) async fn run_fumarole_ingest(args: &Args) -> Result<()> {
                         reset_idle_timer(idle_timer.as_mut(), idle_timeout);
                         match block_assembler.handle_update(slot, update)? {
                             FumaroleAssembledUpdate::None => {}
-                            FumaroleAssembledUpdate::SlotStatus(status_slot) => {
+                            FumaroleAssembledUpdate::SlotStatus(status_slot, status) => {
                                 observe_processed_slot(&mut last_processed_block_slot, status_slot);
+                                if status == commitment {
+                                    metrics::set_network_tip_slot(status_slot);
+                                }
                             }
                             FumaroleAssembledUpdate::Block(update) => {
                                 let update = *update;
@@ -323,7 +326,7 @@ fn build_fumarole_subscribe_request(commitment: i32, include_entries: bool) -> S
 
 enum FumaroleAssembledUpdate {
     None,
-    SlotStatus(u64),
+    SlotStatus(u64, i32),
     Block(Box<SubscribeUpdate>),
 }
 
@@ -347,7 +350,9 @@ impl FumaroleBlockAssembler {
         update: SubscribeUpdate,
     ) -> Result<FumaroleAssembledUpdate> {
         match update.update_oneof {
-            Some(UpdateOneof::Slot(slot)) => Ok(FumaroleAssembledUpdate::SlotStatus(slot.slot)),
+            Some(UpdateOneof::Slot(slot)) => {
+                Ok(FumaroleAssembledUpdate::SlotStatus(slot.slot, slot.status))
+            }
             Some(UpdateOneof::Block(block)) => {
                 Ok(FumaroleAssembledUpdate::Block(Box::new(SubscribeUpdate {
                     filters: update.filters,

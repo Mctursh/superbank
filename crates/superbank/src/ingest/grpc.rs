@@ -19,8 +19,8 @@ use tonic::{Code, Status};
 use tracing::{debug, info, warn};
 use yellowstone_grpc_client::{ClientTlsConfig, GeyserGrpcClient};
 use yellowstone_grpc_proto::prelude::{
-    RewardType, SubscribeRequest, SubscribeRequestFilterBlocks, SubscribeUpdate,
-    SubscribeUpdateBlock, SubscribeUpdateEntry, SubscribeUpdateTransactionInfo,
+    RewardType, SubscribeRequest, SubscribeRequestFilterBlocks, SubscribeRequestFilterSlots,
+    SubscribeUpdate, SubscribeUpdateBlock, SubscribeUpdateEntry, SubscribeUpdateTransactionInfo,
     subscribe_update::UpdateOneof,
 };
 
@@ -178,6 +178,7 @@ pub(crate) async fn run_grpc_ingest(args: &Args) -> Result<()> {
         subscribe_from_slot,
         subscribe_from_slot_mode,
         include_entries,
+        args.grpc_slot_notifications,
     )
     .await?;
 
@@ -268,6 +269,9 @@ pub(crate) async fn run_grpc_ingest(args: &Args) -> Result<()> {
                             last_processed_block_slot = Some(slot);
                             metrics::set_last_processed_slot(slot);
                         }
+                        if let Some(UpdateOneof::Slot(slot_update)) = &update.update_oneof {
+                            metrics::set_network_tip_slot(slot_update.slot);
+                        }
                         process_update(
                             update,
                             args,
@@ -355,13 +359,21 @@ async fn connect_grpc_stream(
     subscribe_from_slot: Option<u64>,
     subscribe_from_slot_mode: Option<FromSlotMode>,
     include_entries: bool,
+    include_slot_notifications: bool,
 ) -> Result<(
     Option<SubscribeUpdate>,
     impl futures::Stream<Item = Result<SubscribeUpdate, Status>>,
 )> {
     let mut client = build_grpc_client(endpoint, args).await?;
     let mut pending_update = None;
-    let build_request = |from_slot| build_subscribe_request(commitment, from_slot, include_entries);
+    let build_request = |from_slot| {
+        build_subscribe_request(
+            commitment,
+            from_slot,
+            include_entries,
+            include_slot_notifications,
+        )
+    };
     let stream = match subscribe_from_slot_mode {
         Some(FromSlotMode::Zero) | Some(FromSlotMode::LatestDb) => {
             let request = build_request(subscribe_from_slot);
@@ -487,6 +499,7 @@ pub(crate) fn build_subscribe_request(
     commitment: i32,
     from_slot: Option<u64>,
     include_entries: bool,
+    include_slot_notifications: bool,
 ) -> SubscribeRequest {
     let mut blocks = HashMap::new();
     blocks.insert(
@@ -499,8 +512,20 @@ pub(crate) fn build_subscribe_request(
         },
     );
 
+    let mut slots = HashMap::new();
+    if include_slot_notifications {
+        slots.insert(
+            "slots".to_string(),
+            SubscribeRequestFilterSlots {
+                filter_by_commitment: Some(true),
+                interslot_updates: Some(false),
+            },
+        );
+    }
+
     SubscribeRequest {
         blocks,
+        slots,
         commitment: Some(commitment),
         from_slot,
         ..Default::default()

@@ -53,6 +53,7 @@ struct SourceErrorLabels {
 struct SlotState {
     last_processed_slot: u64,
     last_inserted_slot: u64,
+    last_network_tip_slot: u64,
 }
 
 pub(crate) struct Metrics {
@@ -61,6 +62,7 @@ pub(crate) struct Metrics {
     last_processed_slot: Gauge,
     last_inserted_slot: Gauge,
     slot_lag: Gauge,
+    chain_tip_lag: Gauge,
     inserted_slots_total: Counter,
     inserted_transactions_total: Counter,
     fumarole_data_channel_capacity: Gauge,
@@ -78,6 +80,7 @@ impl Metrics {
         let last_processed_slot = Gauge::default();
         let last_inserted_slot = Gauge::default();
         let slot_lag = Gauge::default();
+        let chain_tip_lag = Gauge::default();
         let inserted_slots_total = Counter::default();
         let inserted_transactions_total = Counter::default();
         let fumarole_data_channel_capacity = Gauge::default();
@@ -116,6 +119,11 @@ impl Metrics {
             "ingest_slot_lag",
             "Difference between the highest processed slot and highest durably inserted slot",
             slot_lag.clone(),
+        );
+        registry_for_metrics.register(
+            "ingest_chain_tip_lag",
+            "Slots between the current network tip (at configured commitment) and the last durably inserted slot; only populated for fumarole and grpc sources",
+            chain_tip_lag.clone(),
         );
         registry_for_metrics.register(
             "ingest_inserted_slots_total",
@@ -169,6 +177,7 @@ impl Metrics {
             last_processed_slot,
             last_inserted_slot,
             slot_lag,
+            chain_tip_lag,
             inserted_slots_total,
             inserted_transactions_total,
             fumarole_data_channel_capacity,
@@ -257,6 +266,12 @@ impl Metrics {
         Ok(buffer.into_bytes())
     }
 
+    fn set_network_tip_slot(&self, slot: u64) {
+        self.update_slot_state(|state| {
+            state.last_network_tip_slot = state.last_network_tip_slot.max(slot);
+        });
+    }
+
     fn update_slot_state(&self, update: impl FnOnce(&mut SlotState)) {
         let guard = self.slot_state.lock();
         let mut guard = match guard {
@@ -268,6 +283,10 @@ impl Metrics {
             .last_processed_slot
             .saturating_sub(guard.last_inserted_slot);
         self.slot_lag.set(clamp_i64(lag));
+        let chain_tip_lag = guard
+            .last_network_tip_slot
+            .saturating_sub(guard.last_inserted_slot);
+        self.chain_tip_lag.set(clamp_i64(chain_tip_lag));
     }
 }
 
@@ -286,6 +305,10 @@ pub(crate) fn force_init(source: &str, cluster_label: Option<&str>) {
 
 pub(crate) fn set_last_processed_slot(slot: u64) {
     metrics().set_last_processed_slot(slot);
+}
+
+pub(crate) fn set_network_tip_slot(slot: u64) {
+    metrics().set_network_tip_slot(slot);
 }
 
 pub(crate) fn observe_block_insert(table: &str, rows: usize, max_slot: Option<u64>) {

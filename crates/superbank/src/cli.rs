@@ -233,6 +233,18 @@ struct CliArgs {
     )]
     grpc_health_watch_enabled: bool,
 
+    /// Subscribe to slot notifications on the gRPC stream to populate the chain-tip lag metric.
+    #[arg(
+        long,
+        env = "GRPC_SLOT_NOTIFICATIONS",
+        default_value_t = true,
+        default_missing_value = "true",
+        num_args = 0..=1,
+        require_equals = true,
+        action = clap::ArgAction::Set
+    )]
+    grpc_slot_notifications: bool,
+
     /// Solana JSON-RPC URL (required for rpc source)
     #[arg(long, env = "RPC_URL")]
     rpc_url: Option<String>,
@@ -428,6 +440,7 @@ pub(crate) struct Args {
     pub(crate) grpc_http2_adaptive_window: bool,
     pub(crate) grpc_idle_timeout_secs: u64,
     pub(crate) grpc_health_watch_enabled: bool,
+    pub(crate) grpc_slot_notifications: bool,
     pub(crate) rpc_url: Option<String>,
     pub(crate) rpc_to_slot: Option<u64>,
     pub(crate) rpc_slot_count: Option<u64>,
@@ -511,6 +524,8 @@ struct FileConfig {
     grpc_idle_timeout_secs: Option<u64>,
     #[serde(alias = "grpc_health_watch_enabled")]
     grpc_health_watch_enabled: Option<bool>,
+    #[serde(alias = "grpc_slot_notifications")]
+    grpc_slot_notifications: Option<bool>,
     #[serde(alias = "rpc_url")]
     rpc_url: Option<String>,
     #[serde(alias = "rpc_to_slot")]
@@ -707,6 +722,12 @@ pub(crate) fn resolve_args() -> Result<Args> {
             "grpc_health_watch_enabled",
             cli.grpc_health_watch_enabled,
             file_config.grpc_health_watch_enabled,
+        ),
+        grpc_slot_notifications: merge_value(
+            &matches,
+            "grpc_slot_notifications",
+            cli.grpc_slot_notifications,
+            file_config.grpc_slot_notifications,
         ),
         rpc_url: merge_option(&matches, "rpc_url", cli.rpc_url, file_config.rpc_url),
         rpc_to_slot: merge_option(
@@ -1621,6 +1642,7 @@ rpc-from-slot: 456
             grpc_http2_adaptive_window: false,
             grpc_idle_timeout_secs: 30,
             grpc_health_watch_enabled: true,
+            grpc_slot_notifications: true,
             rpc_url: None,
             rpc_to_slot: None,
             rpc_slot_count: None,
