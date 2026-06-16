@@ -13,6 +13,7 @@ grpc-max-decoding-bytes: 67108864
 grpc-http2-adaptive-window: false
 grpc-idle-timeout-secs: 30
 grpc-health-watch-enabled: true
+grpc-slot-notifications: true
 
 # Fumarole source options (required when source is "fumarole")
 # fumarole-endpoint: "https://your.fumarole.endpoint:443"

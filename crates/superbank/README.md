@@ -151,6 +151,7 @@ cargo run -p superbank -- --config path/to/superbank.yaml
 - `--grpc-http2-adaptive-window[=true|false]` / `GRPC_HTTP2_ADAPTIVE_WINDOW` (default: false)
 - `--grpc-idle-timeout-secs` / `GRPC_IDLE_TIMEOUT_SECS` (default: 30; grpc source exits if no messages arrive before the timeout)
 - `--grpc-health-watch-enabled[=true|false]` / `GRPC_HEALTH_WATCH_ENABLED` (default: true; grpc source exits if health is not `SERVING`)
+- `--grpc-slot-notifications[=true|false]` / `GRPC_SLOT_NOTIFICATIONS` (default: true; subscribe to slot notifications on the gRPC stream to populate `superbank_ingest_chain_tip_lag`)
 - `--rpc-url` / `RPC_URL` (required for rpc source)
 - `--rpc-from-slot` / `RPC_FROM_SLOT` (required for rpc source; use `*` for latest slot in
   `blocks_metadata`, `0` to start from earliest available slot)
