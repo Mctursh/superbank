@@ -620,6 +620,9 @@ async fn run_rpc_inserter(args: RpcInserterArgs<'_>) -> Result<RpcInserterOutcom
             }
         }
     } else {
+        if let Ok(err) = fatal_rx.try_recv() {
+            return Err(err);
+        }
         drain_insert_tasks(&mut insert_tasks, None).await?;
     }
 
@@ -2156,6 +2159,110 @@ mod tests {
         VersionedTransaction {
             signatures: vec![Default::default()],
             message: VersionedMessage::Legacy(message),
+        }
+    }
+
+    fn sample_args() -> Args {
+        Args {
+            source: crate::cli::IngestSource::Grpc,
+            endpoint: Some("https://example.invalid".to_string()),
+            x_token: None,
+            fumarole_endpoint: None,
+            fumarole_x_token: None,
+            fumarole_consumer_group: None,
+            fumarole_create_consumer_group: false,
+            fumarole_data_plane_tcp_connections: 4,
+            fumarole_concurrent_download_limit_per_tcp: 2,
+            fumarole_data_channel_capacity: 4096,
+            fumarole_commit_interval_secs: 10,
+            fumarole_no_commit: false,
+            commitment: "finalized".to_string(),
+            dragonsmouth_from_slot: None,
+            fumarole_from_slot: None,
+            rpc_from_slot: None,
+            grpc_max_decoding_bytes: 64 * 1024 * 1024,
+            grpc_http2_adaptive_window: false,
+            grpc_idle_timeout_secs: 30,
+            grpc_health_watch_enabled: true,
+            grpc_slot_notifications: true,
+            rpc_url: None,
+            rpc_to_slot: None,
+            rpc_slot_count: None,
+            rpc_timeout_secs: 30,
+            rpc_retry_backoff_ms: 500,
+            rpc_max_inflight: 64,
+            rpc_max_supported_tx_version: 0,
+            rpc_flush_every_slots: 500,
+            rpc_progress_every_slots: 100,
+            rpc_discovery_chunk_slots: 10_000,
+            bigtable_range: None,
+            bigtable_slot_file: None,
+            bigtable_instance: "solana-ledger".to_string(),
+            bigtable_app_profile: "default".to_string(),
+            bigtable_timeout_secs: None,
+            bigtable_max_message_bytes: 64 * 1024 * 1024,
+            bigtable_credential_path: None,
+            bigtable_credential_json: None,
+            bigtable_discovery_limit: 10_000,
+            bigtable_fetch_batch_size: 500,
+            bigtable_fetch_concurrency: 4,
+            bigtable_insert_concurrency: 1,
+            bigtable_decode_concurrency: 4,
+            bigtable_progress_every_slots: 10_000,
+            clickhouse_url: "http://localhost:8123".to_string(),
+            metrics_host: "0.0.0.0".to_string(),
+            metrics_port: 9901,
+            health_stale_secs: 120,
+            metrics_cluster_label: None,
+            clickhouse_database: "default".to_string(),
+            clickhouse_user: "default".to_string(),
+            clickhouse_password: String::new(),
+            clickhouse_async_insert: false,
+            transactions_table: "default.transactions".to_string(),
+            blocks_table: "default.blocks_metadata".to_string(),
+            entries_table: None,
+            transactions_flush_rows: 25_000,
+            blocks_flush_rows: 2_000,
+            flush_interval_secs: 5,
+            flush_every_block: false,
+        }
+    }
+
+    #[tokio::test]
+    async fn inserter_surfaces_pending_fatal_error_when_results_close() {
+        for _ in 0..64 {
+            let args = sample_args();
+
+            let (result_tx, result_rx) = mpsc::channel::<RpcSlotResult>(1);
+            let (_progress_tx, progress_rx) = watch::channel(0u64);
+            let (_shutdown_tx, shutdown_rx) = watch::channel(0u64);
+            let (fatal_tx, fatal_rx) = mpsc::channel::<anyhow::Error>(1);
+
+            fatal_tx
+                .try_send(anyhow!("simulated fatal getBlock error"))
+                .expect("queue fatal error");
+            drop(result_tx);
+            drop(fatal_tx);
+
+            let outcome = run_rpc_inserter(RpcInserterArgs {
+                clickhouse: Arc::new(build_clickhouse_client(&args)),
+                insert_tables: Arc::new(InsertTables::from_args(&args)),
+                insert_concurrency: 2,
+                args: &args,
+                rpc_clients: Arc::new(Vec::new()),
+                result_rx,
+                progress_rx,
+                shutdown_rx,
+                fatal_rx,
+                range: RpcRange { start: 0, end: 0 },
+                start_time: std::time::Instant::now(),
+            })
+            .await;
+
+            assert!(
+                outcome.is_err(),
+                "run_rpc_inserter returned Ok despite a pending fatal worker error",
+            );
         }
     }
 
