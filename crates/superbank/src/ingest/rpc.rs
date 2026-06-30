@@ -2201,6 +2201,7 @@ mod tests {
             fumarole_data_plane_tcp_connections: 4,
             fumarole_concurrent_download_limit_per_tcp: 2,
             fumarole_data_channel_capacity: 4096,
+            fumarole_memory_soft_limit_bytes: crate::cli::DEFAULT_FUMAROLE_MEMORY_SOFT_LIMIT_BYTES,
             fumarole_commit_interval_secs: 10,
             fumarole_no_commit: false,
             commitment: "finalized".to_string(),
@@ -2252,6 +2253,9 @@ mod tests {
             blocks_flush_rows: 2_000,
             flush_interval_secs: 5,
             flush_every_block: false,
+            insert_max_retries: 5,
+            insert_retry_base_ms: 1_000,
+            insert_retry_max_ms: 30_000,
         }
     }
 
