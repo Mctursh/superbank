@@ -158,7 +158,10 @@ cargo run -p superbank -- --config path/to/superbank.yaml
 - `--grpc-slot-notifications[=true|false]` / `GRPC_SLOT_NOTIFICATIONS` (default: true; subscribe to slot notifications on the gRPC stream to populate `superbank_ingest_chain_tip_lag`)
 - `--rpc-url` / `RPC_URL` (required for rpc source)
 - `--rpc-from-slot` / `RPC_FROM_SLOT` (required for rpc source; use `*` for latest slot in
-  `blocks_metadata`, `0` to start from earliest available slot)
+  `blocks_metadata`, `0` to start from earliest available slot). To resume an interrupted
+  backfill, re-run with the same range: discovery skips slots already in `blocks_metadata` and
+  re-fetches only the gaps. `*` resumes from the highest stored slot and won't refill earlier
+  gaps, so use the range form to recover.
 - `--rpc-to-slot` / `RPC_TO_SLOT` (required for rpc source if `--rpc-slot-count` not set)
 - `--rpc-slot-count` / `RPC_SLOT_COUNT` (required for rpc source if `--rpc-to-slot` not set)
 - `--rpc-timeout-secs` / `RPC_TIMEOUT_SECS` (default: 30)

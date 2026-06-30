@@ -4,6 +4,7 @@
  */
 
 use std::{
+    collections::HashSet,
     sync::{Arc, OnceLock},
     time::Duration,
 };
@@ -41,7 +42,7 @@ use tracing::{info, warn};
 use crate::cli::{Args, FromSlotSpec};
 use crate::clickhouse::{
     BlockMetadataRow, InsertTables, ProgressSnapshot, TransactionRow, build_clickhouse_client,
-    fetch_latest_slot_from_blocks, flush_buffers,
+    fetch_latest_slot_from_blocks, fetch_present_slots_in_range, flush_buffers,
 };
 use crate::commitment::parse_commitment_config;
 use crate::metrics;
@@ -171,15 +172,17 @@ pub(crate) async fn run_rpc_ingest(args: &Args) -> Result<()> {
     let (fatal_tx, fatal_rx) = mpsc::channel(1);
 
     let discovery_backoff = Duration::from_millis(args.rpc_retry_backoff_ms);
-    let discovery_handle = tokio::spawn(discover_slots(
-        discovery_client.clone(),
+    let discovery_handle = tokio::spawn(discover_slots(DiscoverSlotsArgs {
+        rpc_client: discovery_client.clone(),
+        clickhouse: clickhouse.clone(),
+        blocks_table: args.blocks_table.clone(),
         range,
         commitment,
-        args.rpc_discovery_chunk_slots,
-        discovery_backoff,
+        chunk_slots: args.rpc_discovery_chunk_slots,
+        backoff: discovery_backoff,
         slot_tx,
         progress_tx,
-    ));
+    }));
 
     let mut worker_txs = Vec::with_capacity(worker_count);
     let mut worker_handles = Vec::with_capacity(worker_count);
@@ -731,15 +734,30 @@ fn rpc_discovery_commitment(commitment: CommitmentConfig) -> CommitmentConfig {
     commitment
 }
 
-async fn discover_slots(
+struct DiscoverSlotsArgs {
     rpc_client: Arc<RpcClient>,
+    clickhouse: Arc<clickhouse::Client>,
+    blocks_table: String,
     range: RpcRange,
     commitment: CommitmentConfig,
     chunk_slots: u64,
     backoff: Duration,
     slot_tx: mpsc::Sender<u64>,
     progress_tx: watch::Sender<u64>,
-) -> Result<()> {
+}
+
+async fn discover_slots(args: DiscoverSlotsArgs) -> Result<()> {
+    let DiscoverSlotsArgs {
+        rpc_client,
+        clickhouse,
+        blocks_table,
+        range,
+        commitment,
+        chunk_slots,
+        backoff,
+        slot_tx,
+        progress_tx,
+    } = args;
     let mut cursor = range.start;
     let commitment = rpc_discovery_commitment(commitment);
 
@@ -770,7 +788,24 @@ async fn discover_slots(
             }
         };
 
-        for slot in slots {
+        let present: HashSet<u64> =
+            match fetch_present_slots_in_range(clickhouse.as_ref(), &blocks_table, cursor, end)
+                .await
+            {
+                Ok(present) => present.into_iter().collect(),
+                Err(err) => {
+                    metrics::observe_source_error("rpc_slot_presence", "retryable");
+                    warn!(
+                        start_slot = cursor,
+                        end_slot = end,
+                        error = %err,
+                        "rpc slot presence check failed; fetching full window"
+                    );
+                    HashSet::new()
+                }
+            };
+
+        for slot in uningested_slots(slots, &present) {
             if slot > range.end {
                 break;
             }
@@ -787,6 +822,13 @@ async fn discover_slots(
     }
 
     Ok(())
+}
+
+fn uningested_slots(discovered: Vec<u64>, present: &HashSet<u64>) -> Vec<u64> {
+    discovered
+        .into_iter()
+        .filter(|slot| !present.contains(slot))
+        .collect()
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -2173,6 +2215,21 @@ mod tests {
             signatures: vec![Default::default()],
             message: VersionedMessage::Legacy(message),
         }
+    }
+
+    #[test]
+    fn uningested_slots_drops_present_and_preserves_order() {
+        let present: HashSet<u64> = [101, 106].into_iter().collect();
+        assert_eq!(
+            uningested_slots(vec![100, 101, 103, 106], &present),
+            vec![100, 103]
+        );
+        assert_eq!(
+            uningested_slots(vec![1, 2, 3], &HashSet::new()),
+            vec![1, 2, 3]
+        );
+        let all: HashSet<u64> = [5, 6].into_iter().collect();
+        assert!(uningested_slots(vec![5, 6], &all).is_empty());
     }
 
     #[test]
