@@ -67,14 +67,16 @@ jobs:
         run: |
           set -euo pipefail
           tag_version="${GITHUB_REF_NAME#v}"
-          cargo metadata --format-version=1 --locked --no-deps > cargo-metadata.json
-          python3 - "$tag_version" <<'PY'
+          metadata_file="${RUNNER_TEMP}/cargo-metadata.json"
+          cargo metadata --format-version=1 --locked --no-deps > "${metadata_file}"
+          python3 - "$tag_version" "${metadata_file}" <<'PY'
           import json
           import sys
 
           expected = sys.argv[1]
+          metadata_path = sys.argv[2]
           packages = {"superbank-workspace", "superbank", "superbank-rpc"}
-          with open("cargo-metadata.json", encoding="utf-8") as f:
+          with open(metadata_path, encoding="utf-8") as f:
               metadata = json.load(f)
 
           mismatches = [
