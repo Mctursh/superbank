@@ -20,6 +20,7 @@ writer that matches the same schemas).
 - `getFirstAvailableBlock`
 - `minimumLedgerSlot`
 - `getInflationReward`
+- `getEpochSchedule`
 - `getTransactionsForAddress` (custom)
 
 Notes:

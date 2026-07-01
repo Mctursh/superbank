@@ -23,9 +23,9 @@ use crate::clickhouse::{QueryTimings, StoredBlockPayload, StoredBlockRecord};
 use crate::handlers::{
     RouteMetric,
     types::{
-        GetBlockHeightConfig, GetBlocksConfig, GetInflationRewardConfig, GetLatestBlockhashConfig,
-        GetLatestBlockhashResult, GetLatestBlockhashValue, GetSlotConfig, InflationRewardInfo,
-        MAX_GET_BLOCKS_RANGE, RpcContextSlot, reject_unknown_fields,
+        EpochSchedule, GetBlockHeightConfig, GetBlocksConfig, GetInflationRewardConfig,
+        GetLatestBlockhashConfig, GetLatestBlockhashResult, GetLatestBlockhashValue, GetSlotConfig,
+        InflationRewardInfo, MAX_GET_BLOCKS_RANGE, RpcContextSlot, reject_unknown_fields,
     },
 };
 use crate::hydration::{BlockHydrationError, hydrate_block_payload};
@@ -2041,6 +2041,35 @@ pub(crate) async fn handle_get_first_available_block(
     };
     add_downstream_header(&mut resp, &timings);
     Ok(resp)
+}
+
+pub(crate) async fn handle_get_epoch_schedule(
+    state: Arc<AppState>,
+    id: Value,
+    params: Option<Vec<Value>>,
+) -> Result<Response, StatusCode> {
+    let mut route = RouteMetric::for_state("getEpochSchedule", state.as_ref());
+
+    if params.filter(|v| !v.is_empty()).is_some() {
+        route.invalid_params();
+        return Ok(json_rpc_error_response(
+            id,
+            -32602,
+            "Invalid params: expected no parameters",
+            None,
+        ));
+    }
+
+    let epoch_schedule = EpochSchedule {
+        slots_per_epoch: DEFAULT_SLOTS_PER_EPOCH,
+        leader_schedule_slot_offset: DEFAULT_SLOTS_PER_EPOCH,
+        warmup: false,
+        first_normal_epoch: 0,
+        first_normal_slot: 0,
+    };
+
+    route.success();
+    Ok(json_rpc_success_response(id, json!(epoch_schedule)))
 }
 
 pub(crate) async fn handle_get_health(
