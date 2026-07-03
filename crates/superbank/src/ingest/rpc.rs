@@ -180,6 +180,7 @@ pub(crate) async fn run_rpc_ingest(args: &Args) -> Result<()> {
         range,
         commitment,
         chunk_slots: args.rpc_discovery_chunk_slots,
+        skip_ingested: args.rpc_skip_ingested_slots,
         backoff: discovery_backoff,
         slot_tx,
         progress_tx,
@@ -756,6 +757,7 @@ struct DiscoverSlotsArgs {
     range: RpcRange,
     commitment: CommitmentConfig,
     chunk_slots: u64,
+    skip_ingested: bool,
     backoff: Duration,
     slot_tx: mpsc::Sender<u64>,
     progress_tx: watch::Sender<u64>,
@@ -769,6 +771,7 @@ async fn discover_slots(args: DiscoverSlotsArgs) -> Result<()> {
         range,
         commitment,
         chunk_slots,
+        skip_ingested,
         backoff,
         slot_tx,
         progress_tx,
@@ -803,7 +806,7 @@ async fn discover_slots(args: DiscoverSlotsArgs) -> Result<()> {
             }
         };
 
-        let present: HashSet<u64> =
+        let present: HashSet<u64> = if skip_ingested {
             match fetch_present_slots_in_range(clickhouse.as_ref(), &blocks_table, cursor, end)
                 .await
             {
@@ -818,7 +821,10 @@ async fn discover_slots(args: DiscoverSlotsArgs) -> Result<()> {
                     );
                     HashSet::new()
                 }
-            };
+            }
+        } else {
+            HashSet::new()
+        };
 
         for slot in uningested_slots(slots, &present) {
             if slot > range.end {
@@ -2266,6 +2272,7 @@ mod tests {
             rpc_flush_every_slots: 500,
             rpc_progress_every_slots: 100,
             rpc_discovery_chunk_slots: 10_000,
+            rpc_skip_ingested_slots: false,
             bigtable_range: None,
             bigtable_slot_file: None,
             bigtable_instance: "solana-ledger".to_string(),

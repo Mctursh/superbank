@@ -541,6 +541,7 @@ mod tests {
             rpc_flush_every_slots: 500,
             rpc_progress_every_slots: 100,
             rpc_discovery_chunk_slots: 10_000,
+            rpc_skip_ingested_slots: false,
             bigtable_range: None,
             bigtable_slot_file: None,
             bigtable_instance: "solana-ledger".to_string(),
