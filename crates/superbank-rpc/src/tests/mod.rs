@@ -5872,7 +5872,7 @@ fn build_transaction_status_meta_emits_null_lists_when_absent_before_boundary() 
 
     assert!(meta.pre_token_balances.is_none());
     assert!(meta.post_token_balances.is_none());
-    assert!(meta.rewards.is_none());
+    assert!(meta.rewards.as_ref().expect("rewards").is_empty());
 }
 
 #[test]
@@ -5888,7 +5888,7 @@ fn build_transaction_status_meta_emits_null_lists_when_absent_after_boundary() {
 
     assert!(meta.pre_token_balances.is_none());
     assert!(meta.post_token_balances.is_none());
-    assert!(meta.rewards.is_none());
+    assert!(meta.rewards.as_ref().expect("rewards").is_empty());
 }
 
 #[test]
