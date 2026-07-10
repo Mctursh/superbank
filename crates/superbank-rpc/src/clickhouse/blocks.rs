@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use serde::Deserialize;
 use serde_big_array::Array;
-use solana_clock::DEFAULT_SLOTS_PER_EPOCH;
+use solana_epoch_schedule::EpochSchedule;
 
 use crate::processing::{ProcessingError, ProcessingResult};
 
@@ -36,11 +36,11 @@ use super::types::{
 };
 use super::util::{annotate_required_query, http_query_with_id};
 
-fn inflation_epoch_slot_bounds(epoch: u64) -> Option<(u64, u64)> {
+fn inflation_epoch_slot_bounds(epoch: u64, schedule: &EpochSchedule) -> Option<(u64, u64)> {
     let next_epoch = epoch.checked_add(1)?;
     let following_epoch = next_epoch.checked_add(1)?;
-    let start_slot = next_epoch.checked_mul(DEFAULT_SLOTS_PER_EPOCH)?;
-    let end_slot_exclusive = following_epoch.checked_mul(DEFAULT_SLOTS_PER_EPOCH)?;
+    let start_slot = schedule.get_first_slot_in_epoch(next_epoch);
+    let end_slot_exclusive = schedule.get_first_slot_in_epoch(following_epoch);
     Some((start_slot, end_slot_exclusive))
 }
 
@@ -827,6 +827,7 @@ impl ClickHouseClient {
         &self,
         addresses: &[[u8; 32]],
         epoch: u64,
+        schedule: &EpochSchedule,
     ) -> ProcessingResult<(Vec<InflationRewardRecord>, QueryTimings)> {
         const OPERATION: &str = "get_inflation_rewards_for_epoch";
 
@@ -834,8 +835,8 @@ impl ClickHouseClient {
             return Ok((Vec::new(), QueryTimings::zero()));
         }
 
-        let (start_slot, end_slot_exclusive) =
-            inflation_epoch_slot_bounds(epoch).ok_or_else(|| {
+        let (start_slot, end_slot_exclusive) = inflation_epoch_slot_bounds(epoch, schedule)
+            .ok_or_else(|| {
                 ProcessingError::deserialization_msg(format!("epoch {epoch} is out of range"))
             })?;
 
@@ -1749,6 +1750,10 @@ impl ClickHouseClient {
 
 #[cfg(test)]
 mod tests {
+    use solana_epoch_schedule::EpochSchedule;
+
+    use crate::clickhouse::blocks::inflation_epoch_slot_bounds;
+
     use super::{
         BlockTransactionProjection, SLOT_SHARD_DIVISOR, build_block_metadata_query,
         build_block_transactions_query, build_blockhash_valid_query, build_transaction_count_query,
@@ -1946,5 +1951,23 @@ mod tests {
         assert!(!query.contains("\n                slot,"));
         assert!(!query.contains("\n                block_time,"));
         assert!(query.contains("meta_reward_pubkey"));
+    }
+
+    #[test]
+    fn inflation_bounds_mainnet_matches_default_math() {
+        let sched = EpochSchedule::without_warmup();
+        assert_eq!(
+            inflation_epoch_slot_bounds(2, &sched),
+            Some((3 * 432_000, 4 * 432_000))
+        );
+    }
+
+    #[test]
+    fn inflation_bounds_warmup_uses_real_schedule() {
+        let sched = EpochSchedule::default();
+        let (start, end) = inflation_epoch_slot_bounds(2, &sched).unwrap();
+        assert_eq!(start, sched.get_first_slot_in_epoch(3));
+        assert_eq!(end, sched.get_first_slot_in_epoch(4));
+        assert_ne!(start, 3 * 432_000);
     }
 }

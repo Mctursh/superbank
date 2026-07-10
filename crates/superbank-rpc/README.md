@@ -80,10 +80,16 @@ Required files in the chosen set:
 Optional:
 - `gsfa_hot.sql` when using hot-address routing.
 - `token_owner_activity.sql` when using token-owner filters in `getTransactionsForAddress`.
+- `epoch_schedule.sql` for warmup-aware epoch math on non-mainnet clusters (see the note below).
 
 Apply `transactions.sql` before the materialized-view schemas (`gsfa*.sql`, `signatures.sql`, and
 `token_owner_activity.sql`) because those views read from the transactions table. If you use
 `gsfa_hot.sql`, apply `gsfa_nohot.sql` instead of `gsfa.sql`, then apply `gsfa_hot.sql`.
+
+The RPC reads the cluster's epoch schedule from the `epoch_schedule` table at startup for
+warmup-aware epoch math (currently `getInflationReward`). If the table is absent or empty, it
+defaults to the mainnet schedule (no warmup). Non-mainnet clusters must run the ingestor with
+`RPC_URL` set so the real schedule gets stored.
 
 ## Run
 

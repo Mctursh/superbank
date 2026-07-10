@@ -5,7 +5,7 @@
 
 use axum::{http::StatusCode, response::Response};
 use serde_json::{Value, json};
-use solana_clock::{DEFAULT_SLOTS_PER_EPOCH, MAX_PROCESSING_AGE};
+use solana_clock::MAX_PROCESSING_AGE;
 use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_BLOCK_NOT_AVAILABLE;
 use solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_LONG_TERM_STORAGE_SLOT_SKIPPED;
@@ -2188,14 +2188,17 @@ pub(crate) async fn handle_get_inflation_reward(
         None => {
             let context_slot =
                 context_slot_opt.expect("context slot must be resolved when epoch is omitted");
-            (context_slot / DEFAULT_SLOTS_PER_EPOCH).saturating_sub(1)
+            state
+                .epoch_schedule
+                .get_epoch(context_slot)
+                .saturating_sub(1)
         }
     };
 
     route.source_clickhouse();
     let (reward_rows, timings) = match state
         .clickhouse
-        .get_inflation_rewards_for_epoch(&requested_pubkeys, epoch)
+        .get_inflation_rewards_for_epoch(&requested_pubkeys, epoch, &state.epoch_schedule)
         .await
     {
         Ok(result) => result,

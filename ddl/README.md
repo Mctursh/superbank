@@ -16,6 +16,7 @@ Each folder contains the same file basenames:
 - `gsfa_hot.sql`
 - `signatures.sql`
 - `token_owner_activity.sql`
+- `epoch_schedule.sql`
 
 Pick one folder and apply the matching schema set consistently.
 Apply `transactions.sql` before materialized-view files such as `gsfa*.sql`, `signatures.sql`, and

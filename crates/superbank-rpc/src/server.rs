@@ -176,6 +176,8 @@ pub async fn run_server(args: RpcConfig) -> RpcResult<()> {
     // Verify ClickHouse connection
     clickhouse.create_tables().await?;
 
+    let epoch_schedule = clickhouse.load_epoch_schedule().await;
+
     if let Err(err) = metrics::force_init() {
         warn!("Metrics initialization failed; metrics disabled: {err}");
     }
@@ -287,6 +289,7 @@ pub async fn run_server(args: RpcConfig) -> RpcResult<()> {
         latest_block_height_cache: LatestBlockHeightCache::new(Duration::from_millis(1000)),
         rpc_request_timeout: Duration::from_millis(args.rpc_request_timeout_ms),
         emit_http_errors: args.emit_http_errors,
+        epoch_schedule,
         metrics_header_capture: MetricsHeaderCaptureConfig {
             capture_x_endpoint: args.metrics_capture_x_endpoint(),
             capture_x_rpc_node: args.metrics_capture_x_rpc_node(),

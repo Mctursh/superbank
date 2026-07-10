@@ -11,6 +11,7 @@ use axum::{
 };
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde_json::{Value, json};
+use solana_epoch_schedule::EpochSchedule;
 use solana_sdk::{
     hash::Hash,
     instruction::InstructionError,
@@ -159,6 +160,7 @@ fn test_state_with_token_owner_activity_available(available: bool) -> Arc<AppSta
         latest_block_height_cache: height_cache,
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
+        epoch_schedule: EpochSchedule::default(),
         metrics_header_capture: Default::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         #[cfg(feature = "grpc-head-cache")]
@@ -239,6 +241,7 @@ fn test_state_with_clickhouse_url(clickhouse_url: &str) -> Arc<AppState> {
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
         metrics_header_capture: Default::default(),
+        epoch_schedule: EpochSchedule::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         #[cfg(feature = "grpc-head-cache")]
         head_cache: None,
@@ -294,6 +297,7 @@ async fn test_state_with_clickhouse_cached_signature_slot(
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
         metrics_header_capture: Default::default(),
+        epoch_schedule: EpochSchedule::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         #[cfg(feature = "grpc-head-cache")]
         head_cache: None,
@@ -341,6 +345,7 @@ fn test_state_with_head_cache(head_cache: Arc<HeadCache>) -> Arc<AppState> {
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
         metrics_header_capture: Default::default(),
+        epoch_schedule: EpochSchedule::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         head_cache: Some(head_cache),
         #[cfg(feature = "disk-cache")]
@@ -390,6 +395,7 @@ fn test_state_with_head_cache_and_clickhouse_url(
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
         metrics_header_capture: Default::default(),
+        epoch_schedule: EpochSchedule::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         head_cache: Some(head_cache),
         #[cfg(feature = "disk-cache")]
@@ -446,6 +452,7 @@ async fn test_state_with_head_cache_and_cached_signature_slot(
         rpc_request_timeout: Duration::from_millis(10_000),
         emit_http_errors: false,
         metrics_header_capture: Default::default(),
+        epoch_schedule: EpochSchedule::default(),
         hydration_sem: Arc::new(Semaphore::new(8)),
         head_cache: Some(head_cache),
         #[cfg(feature = "disk-cache")]
