@@ -29,6 +29,7 @@ use std::sync::atomic::Ordering;
 use std::time::Duration;
 use tokio::sync::Semaphore;
 
+use crate::clickhouse::StoredAccountsTransactionRecord;
 use crate::clickhouse::{
     BlockMetadataRecord, ClickHouseClient, ClickHouseClientOptions, RoutingPolicy, RoutingScope,
     RoutingTransport, SignatureSlot, StoredBlockPayload, StoredBlockRecord,
@@ -48,6 +49,7 @@ use crate::handlers::transactions::handle_get_transactions_for_address;
 use crate::handlers::types::MAX_GET_BLOCKS_RANGE;
 use crate::hydration::BlockHydrationError;
 use crate::hydration::build_transaction_status_meta;
+use crate::hydration::build_transaction_status_meta_for_accounts;
 use crate::hydration::{
     TransactionHydrationError, build_versioned_transaction, hydrate_block_payload,
     hydrate_block_record, hydrate_transaction_record, parse_instruction_error_display,
@@ -5920,6 +5922,20 @@ fn build_transaction_status_meta_emits_empty_lists_when_present() {
             .expect("post tokens")
             .is_empty()
     );
+    assert!(meta.rewards.as_ref().expect("rewards").is_empty());
+}
+
+#[test]
+fn build_transaction_status_meta_for_accounts_emits_empty_rewards_when_absent() {
+    let mut record = base_transaction_record();
+    record.meta_pre_balances = vec![1];
+    record.meta_post_balances = vec![1];
+    let record: StoredAccountsTransactionRecord = record.into();
+
+    let meta = build_transaction_status_meta_for_accounts(&record)
+        .expect("build meta")
+        .expect("meta present");
+
     assert!(meta.rewards.as_ref().expect("rewards").is_empty());
 }
 
