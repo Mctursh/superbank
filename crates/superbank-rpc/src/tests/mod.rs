@@ -37,8 +37,8 @@ use crate::clickhouse::{
 };
 use crate::handlers::blocks::{
     handle_get_block, handle_get_block_height, handle_get_block_time, handle_get_blocks,
-    handle_get_blocks_with_limit, handle_get_first_available_block, handle_get_health,
-    handle_get_inflation_reward, handle_get_latest_blockhash, handle_get_slot,
+    handle_get_blocks_with_limit, handle_get_epoch_schedule, handle_get_first_available_block,
+    handle_get_health, handle_get_inflation_reward, handle_get_latest_blockhash, handle_get_slot,
     handle_get_transaction_count, handle_is_blockhash_valid, handle_minimum_ledger_slot,
 };
 use crate::handlers::handle_json_rpc_with_headers;
@@ -3178,6 +3178,77 @@ async fn get_first_available_block_rejects_params() {
     let err = parsed.error.expect("error present");
     assert_eq!(err.code, -32602);
     assert_eq!(err.message, "Invalid params: expected no parameters");
+}
+
+#[tokio::test]
+async fn get_epoch_schedule_returns_default_schedule() {
+    let state = test_state();
+
+    let response = handle_get_epoch_schedule(state, json!(1), None)
+        .await
+        .expect("response");
+
+    let (parts, body) = response.into_parts();
+    assert_eq!(parts.status, StatusCode::OK);
+
+    let body_bytes = to_bytes(body, usize::MAX).await.expect("body bytes");
+    let parsed: JsonRpcResponse = serde_json::from_slice(&body_bytes).expect("json parse");
+
+    assert_eq!(
+        parsed.result,
+        Some(json!({
+            "slotsPerEpoch": 432_000u64,
+            "leaderScheduleSlotOffset": 432_000u64,
+            "warmup": false,
+            "firstNormalEpoch": 0u64,
+            "firstNormalSlot": 0u64
+        }))
+    );
+}
+
+#[tokio::test]
+async fn get_epoch_schedule_rejects_params() {
+    let state = test_state();
+
+    let response = handle_get_epoch_schedule(state, json!(1), Some(vec![json!(1u64)]))
+        .await
+        .expect("response");
+
+    let (parts, body) = response.into_parts();
+    assert_eq!(parts.status, StatusCode::OK);
+
+    let body_bytes = to_bytes(body, usize::MAX).await.expect("body bytes");
+    let parsed: JsonRpcResponse = serde_json::from_slice(&body_bytes).expect("json parse");
+
+    let err = parsed.error.expect("error present");
+    assert_eq!(err.code, -32602);
+    assert_eq!(err.message, "Invalid params: expected no parameters");
+}
+
+#[tokio::test]
+async fn get_epoch_schedule_accepts_empty_params() {
+    let state = test_state();
+
+    let response = handle_get_epoch_schedule(state, json!(1), Some(vec![]))
+        .await
+        .expect("response");
+
+    let (parts, body) = response.into_parts();
+    assert_eq!(parts.status, StatusCode::OK);
+
+    let body_bytes = to_bytes(body, usize::MAX).await.expect("body bytes");
+    let parsed: JsonRpcResponse = serde_json::from_slice(&body_bytes).expect("json parse");
+
+    assert_eq!(
+        parsed.result,
+        Some(json!({
+            "slotsPerEpoch": 432_000u64,
+            "leaderScheduleSlotOffset": 432_000u64,
+            "warmup": false,
+            "firstNormalEpoch": 0u64,
+            "firstNormalSlot": 0u64
+        }))
+    );
 }
 
 #[tokio::test]
