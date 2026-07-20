@@ -5,7 +5,7 @@
 
 use axum::{http::StatusCode, response::Response};
 use serde_json::{Value, json};
-use solana_clock::MAX_PROCESSING_AGE;
+use solana_clock::{DEFAULT_SLOTS_PER_EPOCH, MAX_PROCESSING_AGE};
 use solana_commitment_config::CommitmentConfig;
 use solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_BLOCK_NOT_AVAILABLE;
 use solana_rpc_client_api::custom_error::JSON_RPC_SERVER_ERROR_LONG_TERM_STORAGE_SLOT_SKIPPED;
